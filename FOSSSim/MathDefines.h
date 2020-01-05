@@ -20,18 +20,73 @@ typedef Eigen::Matrix<scalar, 2, 2> Matrix2s;
 typedef Eigen::Matrix<scalar, 3, 3> Matrix3s;
 typedef Eigen::Matrix<scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXs;
 
-// Define scalar-valued
-typedef Eigen::Array<scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> ArrayXs;
+// // Define scalar-valued
+// typedef Eigen::Array<scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> ArrayXs;
 
-// Define bool-valued 2D array
-typedef Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> ArrayXb;
+// // Define bool-valued 2D array
+// typedef Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> ArrayXb;
 
 // Special scalar values (infinity, not-a-number, etc)
 // TODO: Actually check that infinity and not-a-number are supported by selected type
 #define SCALAR_INFINITY std::numeric_limits<scalar>::infinity()
 #define SCALAR_NAN std::numeric_limits<scalar>::signaling_NaN()
 
+template <typename T>
+struct Array2D
+{
+public:
+    Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> D;
+    int x;
+    int y;
+    Array2D(int x,int y)
+    {
+        D = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>(x,y);
 
+        this->x = x;
+        this->y = y;
+    }
+
+    const T &operator()(int i, int j) const
+    {
+        return D(i, j);
+    }
+
+    T &operator()(int i, int j)
+    {
+        return D(i, j);
+    }
+
+    void setZero(){
+        D.setZero();
+    }
+    void setOnes(){
+        D.setOnes();
+    }
+
+    int size() const{
+        return D.size();
+    }
+
+    const T * data() const {
+        return D.data();
+    }
+
+    T * data() {
+        return D.data();
+    }
+
+    static Array2D<T> Zero(int rows, int cols) {
+        Array2D<T> D(rows,cols);
+        D.D = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(rows,cols);
+        return D;
+    }
+
+    friend std::ostream &operator<<(std::ostream &os, const Array2D &A)
+    {
+        os << A.D << std::endl;
+        return os;
+    }
+};
 
 
 template <typename T>
@@ -72,7 +127,11 @@ public:
 };
 
 
+// Define scalar-valued
+typedef Array2D<scalar> ArrayXs;
 
+// Define bool-valued 2D array
+typedef Array2D<bool> ArrayXb;
 
 
 
