@@ -45,7 +45,7 @@ void StableFluidsSim::add_source(int N, ArrayXs * x, ArrayXs * x0, scalar dt)
 
 void StableFluidsSim::diffuseD(int N, ArrayXs * x, ArrayXs * x0, scalar diff, scalar dt)
 {
-    assert((*x0 == *x0).all());
+    // assert((*x0 == *x0).all());
 
     scalar a = diff * dt * N * N;
     *x = *x0;
@@ -63,7 +63,7 @@ void StableFluidsSim::diffuseD(int N, ArrayXs * x, ArrayXs * x0, scalar diff, sc
 
 void StableFluidsSim::diffuseU(int N, ArrayXs * x, ArrayXs * x0, scalar diff, scalar dt)
 {
-    assert((*x0 == *x0).all());
+    // assert((*x0 == *x0).all());
 
     scalar a = diff * dt * N * N;
     *x = *x0;
@@ -85,7 +85,7 @@ void StableFluidsSim::diffuseU(int N, ArrayXs * x, ArrayXs * x0, scalar diff, sc
 
 void StableFluidsSim::diffuseV(int N, ArrayXs * x, ArrayXs * x0, scalar diff, scalar dt)
 {
-    assert((*x0 == *x0).all());
+    // assert((*x0 == *x0).all());
 
     scalar a = diff * dt * N * N;
     *x = *x0;
@@ -107,9 +107,9 @@ void StableFluidsSim::diffuseV(int N, ArrayXs * x, ArrayXs * x0, scalar diff, sc
 
 void StableFluidsSim::advectD(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar dt)
 {
-    assert((*x0 == *x0).all());
-    assert((*u == *u).all());
-    assert((*v == *v).all());
+    // assert((*x0 == *x0).all());
+    // assert((*u == *u).all());
+    // assert((*v == *v).all());
 
     // STUDENTS: You will certainly need code here, advect for ([1, N], [1, N])
     for (int i = 1; i <= N; i++) {
@@ -169,9 +169,9 @@ scalar StableFluidsSim::interpolateV(ArrayXs * v, scalar i, scalar j)
 
 void StableFluidsSim::advectU(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar dt)
 {
-    assert((*x0 == *x0).all());
-    assert((*u == *u).all());
-    assert((*v == *v).all());
+    // assert((*x0 == *x0).all());
+    // assert((*u == *u).all());
+    // assert((*v == *v).all());
 
     for (int i = 1; i <= N; i++) {
         for (int j = 0; j <= N; j++) {
@@ -187,9 +187,9 @@ void StableFluidsSim::advectU(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, Arr
 
 void StableFluidsSim::advectV(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar dt)
 {
-    assert((*x0 == *x0).all());
-    assert((*u == *u).all());
-    assert((*v == *v).all());
+    // assert((*x0 == *x0).all());
+    // assert((*u == *u).all());
+    // assert((*v == *v).all());
 
     for (int i = 0; i <= N; i++) {
         for (int j = 1; j <= N; j++) {
