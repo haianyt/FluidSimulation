@@ -43,3 +43,6 @@ endif (EIGEN3_FOUND)
 
 include_directories (${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory (FOSSSim)
+
+
+add_executable(test1 test.cpp)
