@@ -51,4 +51,8 @@ endif (USE_PNG)
 add_executable (FOSSSim ${Headers} ${Templates} ${Sources})
 target_link_libraries (FOSSSim ${FOSSSim_LIBRARIES})
 
+list( APPEND CMAKE_PREFIX_PATH "/opt/hfs18.0/toolkit/cmake" )
+find_package(Houdini REQUIRED)
+target_link_libraries(FOSSSim Houdini)
+
 INSTALL_TARGETS(/bin FOSSSim)
