@@ -3,33 +3,38 @@
 #include <Eigen/StdVector>
 using namespace std;
 
-typedef Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> ArrayXs;
-
+template <typename T>
 struct Array3D
 {
 public:
-    ArrayXs *data;
+    Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> *data;
     int size;
-    inline Array3D(int N)
+    int x;
+    int y;
+    int z;
+    inline Array3D(int x,int y, int z)
     {
-        data = new ArrayXs[N];
-        for(int i = 0; i < N; i++){
-            data[i] = ArrayXs(N,N);
+        data = new Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>[z];
+        for(int i = 0; i < z; i++){
+            data[i] = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>(x,y);
         }
-        size = N;
+        size = z;
+        this->x = x;
+        this->y = y;
+        this->z = z;
     }
 
     inline double &operator()(int i, int j, int k)
     {
-        return data[i](j, k);
+        return data[k](i, j);
     }
 
-    friend ostream &operator<<(ostream &os, const Array3D &A)
+    friend std::ostream &operator<<(std::ostream &os, const Array3D &A)
     {
         for (int i = 0; i < A.size; i++)
         {
-            os << A.data[i] << endl
-               << endl;
+            os << A.data[i] << std::endl
+               << std::endl;
         }
         return os;
     }
@@ -38,9 +43,10 @@ public:
 int main(int argc, char const *argv[])
 {
     cout << "hello" << endl;
-    Array3D A = Array3D(2);
+    Array3D<double> A = Array3D<double>(2,3,4);
     // A.data[0] << 1,2,3,4;
     // A.data[1] << 5,6,7,8;
     cout << A;
+    cout << A.x;
     return 0;
 }

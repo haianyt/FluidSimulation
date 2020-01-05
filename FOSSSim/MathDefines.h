@@ -31,4 +31,49 @@ typedef Eigen::Array<bool, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Arra
 #define SCALAR_INFINITY std::numeric_limits<scalar>::infinity()
 #define SCALAR_NAN std::numeric_limits<scalar>::signaling_NaN()
 
+
+
+
+template <typename T>
+struct Array3D
+{
+public:
+    Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> *data;
+    int size;
+    int x;
+    int y;
+    int z;
+    inline Array3D(int x,int y, int z)
+    {
+        data = new Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>[z];
+        for(int i = 0; i < z; i++){
+            data[i] = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>(x,y);
+        }
+        size = z;
+        this->x = x;
+        this->y = y;
+        this->z = z;
+    }
+
+    inline double &operator()(int i, int j, int k)
+    {
+        return data[k](i, j);
+    }
+
+    friend std::ostream &operator<<(std::ostream &os, const Array3D &A)
+    {
+        for (int i = 0; i < A.size; i++)
+        {
+            os << A.data[i] << std::endl
+               << std::endl;
+        }
+        return os;
+    }
+};
+
+
+
+
+
+
 #endif
