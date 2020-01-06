@@ -140,12 +140,17 @@ protected:
   ArrayXs m_u;
   // Vertical velocities:         defined at top/bottom walls of cell
   ArrayXs m_v;
+
+  ArrayXs m_w;
   
   // For Oracle
   ArrayXs m_uAfterDiffusion;
   ArrayXs m_vAfterDiffusion;
+  ArrayXs m_wAfterDiffusion;
+
   ArrayXs m_uAfterAdvect;
   ArrayXs m_vAfterAdvect;
+  ArrayXs m_wAfterAdvect;
   
   bool VERBOSE;
   
