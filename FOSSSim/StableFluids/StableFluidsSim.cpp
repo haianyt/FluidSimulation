@@ -10,21 +10,24 @@ StableFluidsSim::StableFluidsSim( const int& rows, const int& cols, const scalar
 , m_use_project(use_proj)
 , m_N(rows)
 , m_d(m_N + 2, m_N + 2, m_N + 2)
-, m_u(m_N + 2, m_N + 1, m_N + 1)
-, m_v(m_N + 1, m_N + 2, m_N + 1)
-, m_w(m_N + 1, m_N + 1, m_N + 2)
-, m_uAfterDiffusion(m_N + 2, m_N + 1, m_N + 1)
-, m_vAfterDiffusion(m_N + 1, m_N + 2, m_N + 1)
-, m_wAfterDiffusion(m_N + 1, m_N + 1, m_N + 2)
-, m_uAfterAdvect(m_N + 2, m_N + 1, m_N + 1)
-, m_vAfterAdvect(m_N + 1, m_N + 2, m_N + 1)
-, m_wAfterAdvect(m_N + 1, m_N + 1, m_N + 2)
+, m_u(m_N + 2, m_N + 1, m_N + 2)
+, m_v(m_N + 1, m_N + 2, m_N + 2)
+, m_w(m_N + 2, m_N + 2, m_N + 1)
+, m_uAfterDiffusion(m_N + 2, m_N + 1, m_N + 2)
+, m_vAfterDiffusion(m_N + 1, m_N + 2, m_N + 2)
+, m_wAfterDiffusion(m_N + 2, m_N + 2, m_N + 1)
+, m_uAfterAdvect(m_N + 2, m_N + 1, m_N + 2)
+, m_vAfterAdvect(m_N + 1, m_N + 2, m_N + 2)
+, m_wAfterAdvect(m_N + 2, m_N + 2, m_N + 1)
 , VERBOSE(false)
 , m_all_ones(m_N + 2, m_N + 2, m_N + 2)
+, frame(0)
 {
   assert(rows==cols);
 
   clear();
+  volume = (GU_PrimVolume *)GU_PrimVolume::build(&gdp);
+
 }
 
 StableFluidsSim::~StableFluidsSim()
@@ -53,12 +56,17 @@ void StableFluidsSim::diffuseD(int N, ArrayXs * x, ArrayXs * x0, scalar diff, sc
     scalar a = diff * dt * N * N;
     *x = *x0;
 
-    for (int k = 0; k < 20; k++) {
+    for (int k = 0; k < 30; k++) {
+      for(int z = 1; z<=N; z++)
         for (int i = 1; i <= N; i++) {
             for (int j = 1; j <= N; j++) { // IMPORTANT: DO NOT MODIFY THE LOOP ORDER
                 // STUDENTS: You will certainly need code here, do diffuse for ([1, N], [1, N])
                 // Gauss-Seidel relaxation
-                (*x)(i, j) = ((*x0)(i, j) + a * ((*x)(i-1, j) + (*x)(i+1, j) + (*x)(i, j-1) + (*x)(i, j+1))) / (1 + 4 * a);
+                (*x)(i, j, z) = ((*x0)(i, j, z) + a * (
+                  (*x)(i-1, j, z) + (*x)(i+1, j, z) + 
+                  (*x)(i, j-1, z) + (*x)(i, j+1, z) +
+                  (*x)(i, j, z-1) + (*x)(i, j, z+1)
+                  )) / (1 + 6 * a);
             }
         }
     }
@@ -71,16 +79,23 @@ void StableFluidsSim::diffuseU(int N, ArrayXs * x, ArrayXs * x0, scalar diff, sc
     scalar a = diff * dt * N * N;
     *x = *x0;
 
-    for (int k = 0; k < 20; k++) {
+    for (int k = 0; k < 30; k++) {
+      for (int z = 1; z <= N; z++)
         for (int i = 1; i <= N; i++) {
             for (int j = 0; j <= N; j++) { // IMPORTANT: DO NOT MODIFY THE LOOP ORDER
                 // STUDENTS: You will certainly need code here, do diffuse for ([1, N], [0, N]), note the case when (j == 0) or (j == N) need special treatment
                 if (j == 0)
-                    (*x)(i, j) = ((*x0)(i, j) + a * ((*x)(i-1, j) + (*x)(i+1, j) + (*x)(i, j+1))) / (1 + 3 * a);
+                    (*x)(i, j, z) = ((*x0)(i, j, z) + a * ((*x)(i-1, j, z) + (*x)(i+1, j, z) + 
+                                                    (*x)(i,j,z-1) + (*x)(i,j,z+1) +
+                                                    (*x)(i, j+1, z))) / (1 + 5 * a);
                 else if (j == N)
-                    (*x)(i, j) = ((*x0)(i, j) + a * ((*x)(i-1, j) + (*x)(i+1, j) + (*x)(i, j-1))) / (1 + 3 * a);
+                    (*x)(i, j, z) = ((*x0)(i, j, z) + a * ((*x)(i-1, j, z) + (*x)(i+1, j, z) + 
+                                                    (*x)(i,j,z-1) + (*x)(i,j,z+1) +
+                                                    (*x)(i, j-1, z))) / (1 + 5 * a);
                 else
-                    (*x)(i, j) = ((*x0)(i, j) + a * ((*x)(i-1, j) + (*x)(i+1, j) + (*x)(i, j-1) + (*x)(i, j+1))) / (1 + 4 * a);
+                    (*x)(i, j, z) = ((*x0)(i, j, z) + a * ((*x)(i-1, j, z) + (*x)(i+1, j, z) + 
+                                                    (*x)(i, j, z-1) + (*x)(i, j, z+1) +
+                                                    (*x)(i, j-1, z) + (*x)(i, j+1, z))) / (1 + 6 * a);
             }
         }
     }
@@ -93,124 +108,222 @@ void StableFluidsSim::diffuseV(int N, ArrayXs * x, ArrayXs * x0, scalar diff, sc
     scalar a = diff * dt * N * N;
     *x = *x0;
 
-    for (int k = 0; k < 20; k++) {
+    for (int k = 0; k < 30; k++) {
+      for (int z = 1; z <= N; z++)
         for (int i = 0; i <= N; i++) {
             for (int j = 1; j <= N; j++) { // IMPORTANT: DO NOT MODIFY THE LOOP ORDER
                 // STUDENTS: You will certainly need code here, do diffuse for ([1, N], [0, N]), note the case when (j == 0) or (j == N) need special treatment
                 if (i == 0)
-                    (*x)(i, j) = ((*x0)(i, j) + a * ((*x)(i+1, j) + (*x)(i, j-1) + (*x)(i, j+1))) / (1 + 3 * a);
+                    (*x)(i, j, z) = ((*x0)(i, j, z) + a * ((*x)(i+1, j, z) + 
+                                                    (*x)(i, j, z-1) + (*x)(i, j, z+1) +
+                                                    (*x)(i, j-1, z) + (*x)(i, j+1, z))) / (1 + 5 * a);
                 else if (i == N)
-                    (*x)(i, j) = ((*x0)(i, j) + a * ((*x)(i-1, j) + (*x)(i, j-1) + (*x)(i, j+1))) / (1 + 3 * a);
+                    (*x)(i, j, z) = ((*x0)(i, j, z) + a * ((*x)(i-1, j, z) +
+                                                    (*x)(i, j, z-1) + (*x)(i, j, z+1) +
+                                                    (*x)(i, j-1, z) + (*x)(i, j+1, z))) / (1 + 5 * a);
                 else
-                    (*x)(i, j) = ((*x0)(i, j) + a * ((*x)(i-1, j) + (*x)(i+1, j) + (*x)(i, j-1) + (*x)(i, j+1))) / (1 + 4 * a);
+                    (*x)(i, j, z) = ((*x0)(i, j, z) + a * ((*x)(i-1, j, z) + (*x)(i+1, j, z) + 
+                                                    (*x)(i, j, z-1) + (*x)(i, j, z+1) +
+                                                    (*x)(i, j-1, z) + (*x)(i, j+1, z))) / (1 + 6 * a);
             }
         }
     }
 }
 
-void StableFluidsSim::advectD(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar dt)
+void StableFluidsSim::diffuseW(int N, ArrayXs * x, ArrayXs * x0, scalar diff, scalar dt)
+{
+    // assert((*x0 == *x0).all());
+
+    scalar a = diff * dt * N * N;
+    *x = *x0;
+
+    for (int k = 0; k < 30; k++) {
+      for (int z = 0; z <= N; z++)
+        for (int i = 1; i <= N; i++) {
+            for (int j = 1; j <= N; j++) { // IMPORTANT: DO NOT MODIFY THE LOOP ORDER
+                // STUDENTS: You will certainly need code here, do diffuse for ([1, N], [0, N]), note the case when (j == 0) or (j == N) need special treatment
+                if (z == 0)
+                    (*x)(i, j, z) = ((*x0)(i, j, z) + a * ((*x)(i-1, j, z) + (*x)(i+1, j, z) + 
+                                                    (*x)(i, j, z+1) +
+                                                    (*x)(i, j-1, z) + (*x)(i, j+1, z))) / (1 + 5 * a);
+                else if (z == N)
+                    (*x)(i, j, z) = ((*x0)(i, j, z) + a * ((*x)(i-1, j, z) + (*x)(i+1, j, z) + 
+                                                    (*x)(i, j, z-1) +
+                                                    (*x)(i, j-1, z) + (*x)(i, j+1, z))) / (1 + 5 * a);
+                else
+                    (*x)(i, j, z) = ((*x0)(i, j, z) + a * ((*x)(i-1, j, z) + (*x)(i+1, j, z) + 
+                                                    (*x)(i, j, z-1) + (*x)(i, j, z+1) +
+                                                    (*x)(i, j-1, z) + (*x)(i, j+1, z))) / (1 + 6 * a);
+            }
+        }
+    }
+}
+
+void StableFluidsSim::advectD(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, ArrayXs * w, scalar dt)
 {
     // assert((*x0 == *x0).all());
     // assert((*u == *u).all());
     // assert((*v == *v).all());
 
     // STUDENTS: You will certainly need code here, advect for ([1, N], [1, N])
+    for (int z = 1; z <= N; z++)
     for (int i = 1; i <= N; i++) {
         for (int j = 1; j <= N; j++) {
-            scalar ii = i - dt * N * interpolateV(v, i, j);
-            scalar jj = j - dt * N * interpolateU(u, i, j);
-            (*x)(i, j) = interpolateD(x0, ii, jj);
+            scalar ii = i - dt * N * interpolateV(v, i, j, z);
+            scalar jj = j - dt * N * interpolateU(u, i, j, z);
+            scalar zz = z - dt * N * interpolateW(w, i, j, z);
+            (*x)(i, j, z) = interpolateD(x0, ii, jj, zz);
         }
     }
 }
 
 // Real time fluid dynamics for games page 8
-scalar StableFluidsSim::interpolateD(ArrayXs * d, scalar i, scalar j)
+scalar StableFluidsSim::interpolateD(ArrayXs * d, scalar i, scalar j, scalar z)
 {
     // STUDENTS: You will certainly need code here, note the indices should be CLAMP-ed to [0, m_N], since we have to use (i + 1) and (j + 1)
     int i0 = CLAMP((int)i, 0, m_N);
     int j0 = CLAMP((int)j, 0, m_N);
-    int i1 = i0 + 1, j1 = j0 + 1;
+    int z0 = CLAMP((int)z, 0, m_N);
+
+    int i1 = i0 + 1, j1 = j0 + 1, z1 = z0 + 1;
 
     scalar s1 = CLAMP(i - i0, 0, 1);
     scalar s0 = 1 - s1;
     scalar t1 = CLAMP(j - j0, 0, 1);
     scalar t0 = 1 - t1;
+    scalar r1 = CLAMP(z - z0, 0, 1);
+    scalar r0 = 1 - r1;
 
-    return s0 * (t0 * (*d)(i0, j0) + t1 * (*d)(i0, j1)) + s1 * (t0 * (*d)(i1, j0) + t1 * (*d)(i1, j1));
+    scalar a0 = s0 * (t0 * (*d)(i0, j0, z0) + t1 * (*d)(i0, j1, z0)) + s1 * (t0 * (*d)(i1, j0, z0) + t1 * (*d)(i1, j1, z0));
+    scalar a1 = s0 * (t0 * (*d)(i0, j0, z1) + t1 * (*d)(i0, j1, z1)) + s1 * (t0 * (*d)(i1, j0, z1) + t1 * (*d)(i1, j1, z1));
+
+    return a0 * r0 + a1 * r1;
 }
 
-scalar StableFluidsSim::interpolateU(ArrayXs * u, scalar i, scalar j)
+scalar StableFluidsSim::interpolateU(ArrayXs * u, scalar i, scalar j, scalar z)
 {
     // STUDENTS: You will certainly need code here, note the i index should be CLAMP-ed to [0, m_N], while j index should be CLAMP-ed to [0, m_N-1], since we have to use (i + 1) and (j + 1)
     int i0 = CLAMP((int)i, 0, m_N);
     int j0 = CLAMP((int)(j - 0.5), 0, m_N - 1);
-    int i1 = i0 + 1, j1 = j0 + 1;
+    int z0 = CLAMP((int)z, 0, m_N);
+
+    int i1 = i0 + 1, j1 = j0 + 1, z1 = z0 + 1;
 
     scalar s1 = CLAMP(i - i0, 0, 1);
     scalar s0 = 1 - s1;
     scalar t1 = CLAMP(j - 0.5 - j0, 0, 1);
     scalar t0 = 1 - t1;
+    scalar r1 = CLAMP(z - z0, 0, 1);
+    scalar r0 = 1 - r1;
 
-    return s0 * (t0 * (*u)(i0, j0) + t1 * (*u)(i0, j1)) + s1 * (t0 * (*u)(i1, j0) + t1 * (*u)(i1, j1));
+    scalar a0 = s0 * (t0 * (*u)(i0, j0, z0) + t1 * (*u)(i0, j1, z0)) + s1 * (t0 * (*u)(i1, j0, z0) + t1 * (*u)(i1, j1, z0));
+    scalar a1 = s0 * (t0 * (*u)(i0, j0, z1) + t1 * (*u)(i0, j1, z1)) + s1 * (t0 * (*u)(i1, j0, z1) + t1 * (*u)(i1, j1, z1));
+
+    return a0 * r0 + a1 * r1;
 }
 
-scalar StableFluidsSim::interpolateV(ArrayXs * v, scalar i, scalar j)
+scalar StableFluidsSim::interpolateV(ArrayXs * v, scalar i, scalar j, scalar z)
 {
     // STUDENTS: You will certainly need code here
     int i0 = CLAMP((int)(i - 0.5), 0, m_N - 1);
     int j0 = CLAMP((int)j, 0, m_N);
-    int i1 = i0 + 1, j1 = j0 + 1;
+    int z0 = CLAMP((int)z, 0, m_N);
+    int i1 = i0 + 1, j1 = j0 + 1, z1 = z0 + 1;
 
     scalar s1 = CLAMP(i - 0.5 - i0, 0, 1);
     scalar s0 = 1 - s1;
     scalar t1 = CLAMP(j- j0, 0, 1);
     scalar t0 = 1 - t1;
+    scalar r1 = CLAMP(z - z0, 0, 1);
+    scalar r0 = 1 - r1;
 
-    return s0 * (t0 * (*v)(i0, j0) + t1 * (*v)(i0, j1)) + s1 * (t0 * (*v)(i1, j0) + t1 * (*v)(i1, j1));
+    scalar a0 = s0 * (t0 * (*v)(i0, j0, z0) + t1 * (*v)(i0, j1, z0)) + s1 * (t0 * (*v)(i1, j0, z0) + t1 * (*v)(i1, j1, z0));
+    scalar a1 = s0 * (t0 * (*v)(i0, j0, z1) + t1 * (*v)(i0, j1, z1)) + s1 * (t0 * (*v)(i1, j0, z1) + t1 * (*v)(i1, j1, z1));
+
+    return a0 * r0 + a1 * r1;
 }
 
-void StableFluidsSim::advectU(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar dt)
+scalar StableFluidsSim::interpolateW(ArrayXs * w, scalar i, scalar j, scalar z)
+{
+    // STUDENTS: You will certainly need code here
+    int i0 = CLAMP((int)i, 0, m_N);
+    int j0 = CLAMP((int)j, 0, m_N);
+    int z0 = CLAMP((int)(z-0.5), 0, m_N-1);
+    int i1 = i0 + 1, j1 = j0 + 1, z1 = z0 + 1;
+
+    scalar s1 = CLAMP(i -i0, 0, 1);
+    scalar s0 = 1 - s1;
+    scalar t1 = CLAMP(j- j0, 0, 1);
+    scalar t0 = 1 - t1;
+    scalar r1 = CLAMP(z - 0.5 - z0, 0, 1);
+    scalar r0 = 1 - r1;
+
+    scalar a0 = s0 * (t0 * (*w)(i0, j0, z0) + t1 * (*w)(i0, j1, z0)) + s1 * (t0 * (*w)(i1, j0, z0) + t1 * (*w)(i1, j1, z0));
+    scalar a1 = s0 * (t0 * (*w)(i0, j0, z1) + t1 * (*w)(i0, j1, z1)) + s1 * (t0 * (*w)(i1, j0, z1) + t1 * (*w)(i1, j1, z1));
+
+    return a0 * r0 + a1 * r1;
+}
+
+void StableFluidsSim::advectU(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, ArrayXs * w, scalar dt)
 {
     // assert((*x0 == *x0).all());
     // assert((*u == *u).all());
     // assert((*v == *v).all());
-
+    for (int z = 1; z <= N; z++)
     for (int i = 1; i <= N; i++) {
         for (int j = 0; j <= N; j++) {
             // STUDENTS: You will certainly need code here,
             // add the origin of U grid to the coordinate before sampling, for example, sample at (i + 0, j + 0.5) when you need backtracing the old velocity at (i, j)
             // now you have the backward-traced velocity, minus it from the current position (i + 0, j + 0.5), then sample the velocity again.
-            scalar ii = i - dt * N * interpolateV(v, i, j + 0.5);
-            scalar jj = j + 0.5 - dt * N * interpolateU(u, i, j + 0.5);
-            (*x)(i, j) = interpolateU(x0, ii, jj);
+            scalar ii = i - dt * N * interpolateV(v, i, j + 0.5, z);
+            scalar jj = j + 0.5 - dt * N * interpolateU(u, i, j + 0.5, z);
+            scalar zz = z - dt * N * interpolateW(w, i, j + 0.5, z);
+            (*x)(i, j, z) = interpolateU(x0, ii, jj, zz);
         }
     }
 }
 
-void StableFluidsSim::advectV(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar dt)
+void StableFluidsSim::advectV(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, ArrayXs * w, scalar dt)
 {
     // assert((*x0 == *x0).all());
     // assert((*u == *u).all());
     // assert((*v == *v).all());
-
+    for (int z = 1; z <= N; z++)
     for (int i = 0; i <= N; i++) {
         for (int j = 1; j <= N; j++) {
             // STUDENTS: You will certainly need code here
-            scalar ii = i + 0.5 - dt * N * interpolateV(v, i + 0.5, j);
-            scalar jj = j - dt * N * interpolateU(u, i + 0.5, j);
-            (*x)(i, j) = interpolateV(x0, ii, jj);
+            scalar ii = i + 0.5 - dt * N * interpolateV(v, i + 0.5, j, z);
+            scalar jj = j - dt * N * interpolateU(u, i + 0.5, j, z);
+            scalar zz = z - dt * N * interpolateW(w, i + 0.5, j, z);
+            (*x)(i, j, z) = interpolateV(x0, ii, jj, zz);
         }
     }
 }
 
-void StableFluidsSim::project(int N, ArrayXs * u, ArrayXs * v, ArrayXs * u0, ArrayXs * v0)
+void StableFluidsSim::advectW(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, ArrayXs * w, scalar dt)
+{
+    // assert((*x0 == *x0).all());
+    // assert((*u == *u).all());
+    // assert((*v == *v).all());
+    for (int z = 0; z <= N; z++)
+    for (int i = 1; i <= N; i++) {
+        for (int j = 1; j <= N; j++) {
+            // STUDENTS: You will certainly need code here
+            scalar ii = i - dt * N * interpolateV(v, i , j, z+0.5);
+            scalar jj = j - dt * N * interpolateU(u, i , j, z+0.5);
+            scalar zz = z + 0.5 - dt * N * interpolateW(w, i , j, z+0.5);
+            (*x)(i, j, z) = interpolateW(x0, ii, jj, zz);
+        }
+    }
+}
+
+void StableFluidsSim::project(int N, ArrayXs * u, ArrayXs * v, ArrayXs * w, ArrayXs * u0, ArrayXs * v0, ArrayXs * w0)
 {
     if (VERBOSE) std::cout << "u0: " << std::endl << *u0 << std::endl << std::endl;
     if (VERBOSE) std::cout << "v0: " << std::endl << *v0 << std::endl << std::endl;
 
-    ArrayXs div(N + 2, N + 2);
-    ArrayXs p(N + 2, N + 2);
+    ArrayXs div(N + 2, N + 2, N+2);
+    ArrayXs p(N + 2, N + 2, N+2);
     div.setZero();
     p.setZero();
     scalar h = 1.0 / N;
@@ -220,55 +333,89 @@ void StableFluidsSim::project(int N, ArrayXs * u, ArrayXs * v, ArrayXs * u0, Arr
     // set solid boundary conditions, 0 the most top and bottom row / left and right column of u0, v0
     // [(0, 0), (N + 1, 0)], [(0, N ), (N + 1, N)], [(0, 0), (0, N)], and [(N + 1, 0), (N + 1, N)] for u
     // [(0, 0), (0, N + 1)], [(N, 0),(N, N + 1)], [(0, 0), (N, 0)], and [(0, N + 1), (N, N + 1)] for v)
-    for(int i = 0; i <= N; i++) {
-        (*u0)(i, 0) = 0;
-        (*u0)(i, N) = 0;
-        (*v0)(0, i) = 0;
-        (*v0)(N, i) = 0;
-
-        (*u0)(0, i) = 0;
-        (*u0)(N + 1, i) = 0;
-        (*v0)(i, 0) = 0;
-        (*v0)(i, N + 1) = 0;
+    
+      std::cout << "set boundary" << std::endl;
+    for(int j = 0; j <= N+1; j++)
+    for(int i = 0; i <= N+1; i++) {
+        (*u0)(i, 0, j) = 0;
+        (*u0)(i, N, j) = 0;
+        (*v0)(0, i, j) = 0;
+        (*v0)(N, i, j) = 0;
+        (*w0)(i, j, 0) = 0;
+        (*w0)(i, j, N) = 0;
     }
 
-    (*u0)(N + 1, 0) = 0;
-    (*u0)(N + 1, N) = 0;
-    (*v0)(0, N + 1) = 0;
-    (*v0)(N, N + 1) = 0;
+    for(int j = 0; j <= N+1; j++)
+    for(int i = 0; i <= N; i++) {
+        (*u0)(0, i, j) = 0;
+        (*u0)(N + 1, i, j) = 0;
+        (*u0)(j, i, 0) = 0;
+        (*u0)(j, i, N + 1) = 0;
 
+        (*v0)(i, 0, j) = 0;
+        (*v0)(i, N + 1, j) = 0;
+        (*v0)(i, j, 0) = 0;
+        (*v0)(i, j, N + 1) = 0;
+
+        (*w0)(j, 0, i) = 0;
+        (*w0)(j, N + 1, i) = 0;
+        (*w0)(0, j, i) = 0;
+        (*w0)(N + 1, j, i) = 0;
+
+    }
+
+    // (*u0)(N + 1, 0) = 0;
+    // (*u0)(N + 1, N) = 0;
+    // (*v0)(0, N + 1) = 0;
+    // (*v0)(N, N + 1) = 0;
+
+  std::cout << "cal div" << std::endl;
+
+    for (int z = 1; z <= N; z++)
     for (int i = 1; i <= N; i++) {
         for (int j = 1; j <= N; j++) {
             // compute divergence of the velocity field, note the divergence field is available from ([1, N], [1, N])
             // equation from page 3
-            div(i, j) = ((*v0)(i, j) - (*v0)(i - 1, j) + (*u0)(i, j) - (*u0)(i, j - 1)) / h;
+            div(i, j, z) = ((*v0)(i, j, z) - (*v0)(i - 1, j, z) + 
+                        (*u0)(i, j, z) - (*u0)(i, j - 1, z) +
+                        (*w0)(i, j, z) - (*w0)(i, j, z - 1)) / h;
         }
     }
 
-    for (int k = 0; k < 20; k++) {
+  std::cout << "gauss seidel" << std::endl;
+    for (int k = 0; k < 30; k++) {
+      for (int z = 1; z <= N; z++)
         for (int i = 1; i <= N; i++) {
             for (int j = 1; j <= N; j++) { // IMPORTANT: DO NOT MODIFY THE LOOP ORDER
                 // solve for pressure inside the region ([1, N], [1, N])
                 // equation from page 3, account for corner cases
-                scalar d = div(i, j) * h * h;
+                scalar d = div(i, j,z) * h * h;
                 scalar num = 0;
                 if(i > 1) {
                     num += 1;
-                    d -= p(i - 1, j);
+                    d -= p(i - 1, j, z);
                 }
                 if(i < N) {
                     num += 1;
-                    d -= p(i + 1, j);
+                    d -= p(i + 1, j, z);
                 }
                 if(j > 1) {
                     num += 1;
-                    d -= p(i, j - 1);
+                    d -= p(i, j - 1, z);
                 }
                 if(j < N) {
                     num += 1;
-                    d -= p(i, j + 1);
+                    d -= p(i, j + 1, z);
                 }
-                p(i, j) = -d / num;
+                if(z > 1) {
+                    num += 1;
+                    d -= p(i, j, z-1);
+                }
+                if(z < N) {
+                    num += 1;
+                    d -= p(i, j, z+1);
+                }
+                p(i, j,z) = -d / num;
             }
         }
     }
@@ -276,23 +423,37 @@ void StableFluidsSim::project(int N, ArrayXs * u, ArrayXs * v, ArrayXs * u0, Arr
     (*u) = (*u0);
     (*v) = (*v0);
 
-    for (int i = 1; i <= N; i++) {
-        for (int j = 1; j < N; j++) {
-            // apply pressure to correct velocities ([1, N], [1, N)) for u, ([1, N), [1, N]) for v
-            // equation from page 6
-            (*u)(i, j) = (*u0)(i, j) - (p(i, j+1) - p(i, j)) / h;
-            // switch i, j because boundary is ([1, N), [1, N]) for v
-            (*v)(j, i) = (*v0)(j, i) - (p(j+1, i) - p(j, i)) / h;
-        }
+  std::cout << "apply pressure" << std::endl;
+    for(int z = 1; z <= N; z++)
+    for(int i = 1; i <= N; i++)
+    for(int j = 1; j <= N; j++){
+      if(j!=N)
+        (*u)(i, j, z) = (*u0)(i, j, z) - (p(i, j+1, z) - p(i, j, z)) / h;
+      if(i!=N)
+        (*v)(i, j, z) = (*v0)(i, j, z) - (p(i+1, j, z) - p(i, j, z)) / h;
+      if(z!=N)
+        (*w)(i, j, z) = (*w0)(i, j, z) - (p(i, j, z+1) - p(i, j, z)) / h;
     }
+
+
+    // for (int i = 1; i <= N; i++) {
+    //     for (int j = 1; j < N; j++) {
+    //         // apply pressure to correct velocities ([1, N], [1, N)) for u, ([1, N), [1, N]) for v
+    //         // equation from page 6
+    //         (*u)(i, j) = (*u0)(i, j) - (p(i, j+1) - p(i, j)) / h;
+    //         // switch i, j because boundary is ([1, N), [1, N]) for v
+    //         (*v)(j, i) = (*v0)(j, i) - (p(j+1, i) - p(j, i)) / h;
+    //     }
+    // }
 }
 
-void StableFluidsSim::dens_step(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar diff, scalar dt)
+void StableFluidsSim::dens_step(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, ArrayXs * w, scalar diff, scalar dt)
 {
   // IMPORTANT: DO NOT MODIFY THIS CODE!
 
   ArrayXs * outu = u;
   ArrayXs * outv = v;
+  ArrayXs * outw = w;
 
   add_source(N, x, x0, dt);
 
@@ -300,65 +461,88 @@ void StableFluidsSim::dens_step(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, A
   diffuseD(N, x, x0, diff, dt);
 
   SWAP(x0, x);
-  advectD(N, x, x0, u, v, dt);
+  advectD(N, x, x0, u, v, w, dt);
 
-  if (outu != u)
+  // if (outu != u)
     *outu = *u;
-  if (outv != v)
+  // if (outv != v)
     *outv = *v;
-
+  // if (outw != w)
+    *outw = *w;
 }
 
-void StableFluidsSim::vel_step(int N, ArrayXs * u, ArrayXs * v, ArrayXs * u0, ArrayXs * v0, scalar visc, scalar dt)
+void StableFluidsSim::vel_step(int N, ArrayXs * u, ArrayXs * v, ArrayXs * w, ArrayXs * u0, ArrayXs * v0, ArrayXs * w0, scalar visc, scalar dt)
 {
   // IMPORTANT: DO NOT MODIFY THIS CODE!
 
   ArrayXs * outu = u;
   ArrayXs * outv = v;
+  ArrayXs * outw = w;
 
   add_source(N, u, u0, dt);
   add_source(N, v, v0, dt);
+  add_source(N, w, w0, dt);
+
+  std::cout << "diffuse vel" << std::endl;
 
   if(visc > 0.0) {
     SWAP(u0, u);
     SWAP(v0, v);
+    SWAP(w0, w);
     diffuseU(N, u, u0, visc, dt);
     diffuseV(N, v, v0, visc, dt);
+    diffuseW(N, w, w0, visc, dt);
   }
 
+  std::cout << "project" << std::endl;
   if(m_use_project) {
     SWAP(u0, u);
     SWAP(v0, v);
-    project(N, u, v, u0, v0);
+    SWAP(w0, w);
+    project(N, u, v, w, u0, v0, w0);
   }
 
   m_uAfterDiffusion.setZero();
   m_vAfterDiffusion.setZero();
+  m_wAfterDiffusion.setZero();
   m_uAfterDiffusion = *u;
   m_vAfterDiffusion = *v;
+  m_wAfterDiffusion = *w;
 
+  std::cout << "advect" << std::endl;
   if(m_use_advect) {
     SWAP(u0, u);
     SWAP(v0, v);
-    advectU(N, u, u0, u0, v0, dt);
-    advectV(N, v, v0, u0, v0, dt);
+    SWAP(w0, w);
+      std::cout << "advect u" << std::endl;
+    advectU(N, u, u0, u0, v0, w0, dt);
+      std::cout << "advect v" << std::endl;
+    advectV(N, v, v0, u0, v0, w0, dt);
+      std::cout << "advect w" << std::endl;
+    advectW(N, w, w0, u0, v0, w0, dt);
   }
+std::cout << "after advect" << std::endl;
 
   m_uAfterAdvect.setZero();
   m_vAfterAdvect.setZero();
+  m_wAfterAdvect.setZero();
   m_uAfterAdvect = *u;
   m_vAfterAdvect = *v;
+  m_wAfterAdvect = *w;
 
+  std::cout << "project" << std::endl;
   if(m_use_project) {
     SWAP(u0, u);
     SWAP(v0, v);
-    project(N, u, v, u0, v0);
+    SWAP(w0, w);
+    project(N, u, v, w, u0, v0, w0);
   }
 
-  if (outu != u)
+  // if (outu != u)
     *outu = *u;
-  if (outv != v)
+  // if (outv != v)
     *outv = *v;
+    *outw = *w;
 
 }
 
@@ -366,20 +550,45 @@ void StableFluidsSim::stepSystem( const scalar& dt)
 {
   // IMPORTANT: DO NOT MODIFY THIS CODE!
   if (VERBOSE) std::cout << "step" << std::endl;
-  ArrayXs new_d(m_N + 2, m_N + 2);
-  ArrayXs new_u(m_N + 2, m_N + 1);
-  ArrayXs new_v(m_N + 1, m_N + 2);
+  ArrayXs new_d(m_N + 2, m_N + 2, m_N + 2);
+  ArrayXs new_u(m_N + 2, m_N + 1, m_N + 2);
+  ArrayXs new_v(m_N + 1, m_N + 2, m_N + 2);
+  ArrayXs new_w(m_N + 2, m_N + 2, m_N + 1);
 
   new_d.setZero();
   new_u.setZero();
   new_v.setZero();
+  new_w.setZero();
 
-  vel_step(m_N, &new_u, &new_v, &m_u, &m_v, m_visc, dt);
-  dens_step(m_N, &new_d, &m_d, &new_u, &new_v, m_diff, dt);
+
+  //sourcing
+  std::cout << "sourcing" << std::endl;
+
+  Vector3s c((m_N+2)/2, 10, (m_N+2)/2);
+  scalar r = 6;
+  for (int z = 1; z <= m_N; z++)
+  for (int i = 1; i <= m_N; i++)
+  for (int j = 1; j <= m_N; j++){
+    Vector3s p(i,j,z);
+    if((p-c).norm() < r){
+      m_d(i,j,z) += 20 * dt;
+      m_u(i,j,z) = 5;
+    }
+    m_d(i,j,z) = CLAMP(m_d(i,j,z),0,1);
+  }
+
+std::cout << "step vel" << std::endl;
+  vel_step(m_N, &new_u, &new_v, &new_w, &m_u, &m_v, &m_w, m_visc, dt);
+  std::cout << "step dens" << std::endl;
+  dens_step(m_N, &new_d, &m_d, &new_u, &new_v, &new_w, m_diff, dt);
 
   m_d = new_d;
   m_u = new_u;
   m_v = new_v;
+  m_w = new_w;
+
+  frame++;
+  save(frame);
 }
 
 const ArrayXs& StableFluidsSim::getMarkerDensities() const
@@ -427,6 +636,7 @@ void StableFluidsSim::clear()
   m_d.setZero();
   m_u.setZero();
   m_v.setZero();
+  m_w.setZero();
   m_all_ones.setOnes();
 }
 
@@ -564,3 +774,26 @@ scalar StableFluidsSim::getViscosity()
   return m_visc;
 }
 
+
+
+void StableFluidsSim::save(int framenum)
+{
+    UT_VoxelArrayWriteHandleF handle = volume->getVoxelWriteHandle();
+    // ArrayXs &marker_density = m_d;
+    handle->size(m_N, m_N, m_N);
+
+    for (int z = 0; z < m_N; ++z)
+    for (int i = 0; i < m_N; ++i)
+        for (int j = 0; j < m_N; ++j) 
+            {
+              // if(m_d(i+1,j+1,z+1)>0){
+              //   std::cout << m_d(i+1,j+1,z+1) << std::endl;
+              // }
+                handle->setValue(i, j, z, m_d(i+1,j+1,z+1));
+            }
+
+    std::ofstream myfile;
+    myfile.open(std::to_string(framenum) + ".bgeo");
+    gdp.save(myfile, 1, NULL);
+    myfile.close();
+}

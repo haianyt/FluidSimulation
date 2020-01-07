@@ -93,33 +93,84 @@ template <typename T>
 struct Array3D
 {
 public:
-    Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> *data;
-    int size;
+    Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> *D;
     int x;
     int y;
     int z;
     inline Array3D(int x,int y, int z)
     {
-        data = new Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>[z];
+        D = new Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>[z];
         for(int i = 0; i < z; i++){
-            data[i] = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>(x,y);
+            D[i] = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>(x,y);
         }
-        size = z;
         this->x = x;
         this->y = y;
         this->z = z;
     }
 
-    inline double &operator()(int i, int j, int k)
+    inline T &operator()(int i, int j, int k)
     {
-        return data[k](i, j);
+        return D[k](i, j);
+    }
+
+    const T &operator()(int i, int j) const
+    {
+        return D[(int)z/2](i, j);
+    }
+
+    T &operator()(int i, int j)
+    {
+        return D[(int)z/2](i, j);
+    }
+
+    void setZero(){
+        for(int i = 0; i < z; i++)
+            D[i].setZero();
+    }
+    void setOnes(){
+        for(int i = 0; i < z; i++)
+            D[i].setOnes();
+    }
+
+    int size() const{
+        return D[(int)z/2].size();
+    }
+
+    const T * data() const {
+        return D[(int)z/2].data();
+    }
+
+    T * data() {
+        return D[(int)z/2].data();
+    }
+
+    static Array3D<T> Zero(int x, int y, int z) {
+        Array3D<T> A(x,y,z);
+        for(int i = 0; i < A.z; i++)
+            A.D[i] = Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>::Zero(x,y);
+        return A;
+    }
+
+    // Array& operator=(const Array& other) {
+    //     for(int i = 0; i < z; i++){
+
+    //     }
+    // }
+
+    void operator=(const Array3D &other){
+        x = other.x;
+        y = other.y;
+        z = other.z;
+        for(int i = 0; i < z; i ++){
+            D[i] = other.D[i];
+        }
     }
 
     friend std::ostream &operator<<(std::ostream &os, const Array3D &A)
     {
-        for (int i = 0; i < A.size; i++)
+        for (int i = 0; i < A.z; i++)
         {
-            os << A.data[i] << std::endl
+            os << A.D[i] << std::endl
                << std::endl;
         }
         return os;
@@ -128,10 +179,10 @@ public:
 
 
 // Define scalar-valued
-typedef Array2D<scalar> ArrayXs;
+typedef Array3D<scalar> ArrayXs;
 
 // Define bool-valued 2D array
-typedef Array2D<bool> ArrayXb;
+typedef Array3D<bool> ArrayXb;
 
 
 

@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 2.6.2)
 
 project (FOSSSim)
+# set (CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install")
 
@@ -46,3 +47,9 @@ add_subdirectory (FOSSSim)
 
 
 add_executable(test1 test.cpp)
+
+# list( APPEND CMAKE_PREFIX_PATH "$ENV{HFS}/toolkit/cmake" )
+# find_package(Houdini REQUIRED)
+
+# target_link_libraries(test1 Houdini)
+

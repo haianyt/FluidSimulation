@@ -4,7 +4,10 @@
 #include <iostream>
 
 #include "FOSSSim/MathUtilities.h"
-
+#include <CMD/CMD_Args.h>
+#include <UT/UT_Assert.h>
+#include <GU/GU_Detail.h>
+#include <GU/GU_PrimVolume.h>
 class StableFluidsSim
 {
 public:
@@ -92,6 +95,7 @@ public:
   virtual ArrayXb& getHasFluid();
   virtual const ArrayXb& getHasFluid() const;
   
+  virtual void save(int framenum);
 protected:
   // Convenient grid access
   static scalar & d(ArrayXs * d, int i, int j) { return (*d)(i, j); }
@@ -100,26 +104,29 @@ protected:
   static scalar & v(ArrayXs * v, int i, int j) { return (*v)(i, j); }
   
   // Interpolator
-  scalar interpolateD(ArrayXs * d, scalar i, scalar j);
-  scalar interpolateU(ArrayXs * u, scalar i, scalar j);
-  scalar interpolateV(ArrayXs * v, scalar i, scalar j);
+  scalar interpolateD(ArrayXs * d, scalar i, scalar j, scalar z);
+  scalar interpolateU(ArrayXs * u, scalar i, scalar j, scalar z);
+  scalar interpolateV(ArrayXs * v, scalar i, scalar j, scalar z);
+  scalar interpolateW(ArrayXs * w, scalar i, scalar j, scalar z);
   
 protected:
   // Time stepping utilities
-  virtual void dens_step(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar diff, scalar dt);
-  virtual void vel_step(int N, ArrayXs * u, ArrayXs * v, ArrayXs * u0, ArrayXs * v0, scalar visc, scalar dt);
+  virtual void dens_step(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v,  ArrayXs * w, scalar diff, scalar dt);
+  virtual void vel_step(int N, ArrayXs * u, ArrayXs * v,  ArrayXs * w, ArrayXs * u0, ArrayXs * v0,  ArrayXs * w0, scalar visc, scalar dt);
   
   virtual void add_source(int N, ArrayXs * x, ArrayXs * x0, scalar dt);
   
   virtual void diffuseD(int N, ArrayXs * x, ArrayXs * x0, scalar diff, scalar dt);
   virtual void diffuseU(int N, ArrayXs * x, ArrayXs * x0, scalar diff, scalar dt);
   virtual void diffuseV(int N, ArrayXs * x, ArrayXs * x0, scalar diff, scalar dt);
-  
-  virtual void advectD(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar dt);
-  virtual void advectU(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar dt);
-  virtual void advectV(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, scalar dt);
-  
-  virtual void project(int N, ArrayXs * u, ArrayXs * v, ArrayXs * u0, ArrayXs * v0);
+  virtual void diffuseW(int N, ArrayXs * x, ArrayXs * x0, scalar diff, scalar dt);
+
+  virtual void advectD(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, ArrayXs * w, scalar dt);
+  virtual void advectU(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, ArrayXs * w, scalar dt);
+  virtual void advectV(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, ArrayXs * w, scalar dt);
+  virtual void advectW(int N, ArrayXs * x, ArrayXs * x0, ArrayXs * u, ArrayXs * v, ArrayXs * w, scalar dt);
+
+  virtual void project(int N, ArrayXs * u, ArrayXs * v, ArrayXs * w, ArrayXs * u0, ArrayXs * v0,  ArrayXs * w0);
   
   void SWAP(ArrayXs *& x1, ArrayXs *& x2);
   
@@ -155,6 +162,11 @@ protected:
   bool VERBOSE;
   
   ArrayXb m_all_ones;
+
+
+      GU_Detail gdp;
+    GU_PrimVolume *volume;
+    int frame;
 };
 
 #endif

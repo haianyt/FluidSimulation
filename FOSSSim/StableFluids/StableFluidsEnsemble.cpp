@@ -21,7 +21,7 @@ StableFluidsEnsemble::StableFluidsEnsemble()
       //, m_window_width(4*m_fluid_sim->physicalCols())
       //, m_window_height(4*m_fluid_sim->physicalRows())
       ,
-      m_window_width(500), m_window_height(500), m_left_drag(false), m_right_drag(false), m_last_row(0), m_last_col(0), m_display_debugging(false), m_display_surface(true), m_particle_cell_map(N + 1, N + 1), frame(0)
+      m_window_width(500), m_window_height(500), m_left_drag(false), m_right_drag(false), m_last_row(0), m_last_col(0), m_display_debugging(false), m_display_surface(true), m_particle_cell_map(N + 1, N + 1)
 {
 #ifdef WITH_MARKERS
     m_comparison_fluid_sim = new StableFluidsSimWithMarkers(N, N, m_solids);
@@ -31,7 +31,7 @@ StableFluidsEnsemble::StableFluidsEnsemble()
     assert(m_comparison_fluid_sim != NULL);
     m_fluid_sim_grader = new StableFluidsSimGrader;
 
-    volume = (GU_PrimVolume *)GU_PrimVolume::build(&gdp);
+    // volume = (GU_PrimVolume *)GU_PrimVolume::build(&gdp);
 }
 
 StableFluidsEnsemble::~StableFluidsEnsemble()
@@ -41,7 +41,7 @@ StableFluidsEnsemble::~StableFluidsEnsemble()
 void StableFluidsEnsemble::stepSystem(const scalar &dt)
 {
     m_fluid_sim->stepSystem(dt);
-    frame++;
+    // frame++;
 }
 
 void StableFluidsEnsemble::keyboard(const unsigned char &key, const int &x, const int &y)
@@ -251,28 +251,9 @@ void StableFluidsEnsemble::display()
         display_particle();
     }
 #else
-    save();
+    // save();
     display_cell();
 #endif
-}
-
-void StableFluidsEnsemble::save()
-{
-    UT_VoxelArrayWriteHandleF handle = volume->getVoxelWriteHandle();
-    const ArrayXs &marker_density = m_fluid_sim->getMarkerDensities();
-    handle->size(N, N, N);
-
-    for (int i = 0; i < N; ++i)
-        for (int j = 0; j < N; ++j)
-            for (int k = 0; k < N; ++k)
-            {
-                handle->setValue(i, j, k, marker_density(i+1,j+1)*5);
-            }
-
-    std::ofstream myfile;
-    myfile.open(std::to_string(frame) + ".bgeo");
-    gdp.save(myfile, 1, NULL);
-    myfile.close();
 }
 
 void StableFluidsEnsemble::display_cell()
@@ -281,10 +262,11 @@ void StableFluidsEnsemble::display_cell()
 #ifdef WITH_MARKERS
     const ArrayXb &fluids = (dynamic_cast<StableFluidsSimWithMarkers *>(m_fluid_sim))->has_fluid();
 #else
-    ArrayXb fluids(N + 2, N + 2);
+    ArrayXb fluids(N + 2, N + 2, N+2);
+    for(int z = 0; z < N+2; z++)
     for (int i = 0; i < N + 2; i++)
         for (int j = 0; j < N + 2; j++)
-            fluids(i, j) = true;
+            fluids(i, j,z) = true;
 #endif
 
     for (int row = 0; row < m_fluid_sim->physicalRows(); ++row)
@@ -461,295 +443,296 @@ void StableFluidsEnsemble::display_particle()
 
 void StableFluidsEnsemble::display_surface()
 {
-    const ArrayXs &marker_density = m_fluid_sim->getMarkerDensities();
-#ifdef WITH_MARKERS
-    const std::vector<Vector2s> &particles = (dynamic_cast<StableFluidsSimWithMarkers *>(m_fluid_sim))->particles();
-    const ArrayXb &fluids = (dynamic_cast<StableFluidsSimWithMarkers *>(m_fluid_sim))->has_fluid();
-#else
-    const std::vector<Vector2s> &particles = std::vector<Vector2s>();
-    ArrayXb fluids(N + 2, N + 2);
-    for (int i = 0; i < N + 2; i++)
-        for (int j = 0; j < N + 2; j++)
-            fluids(i, j) = true;
-#endif
+//     const ArrayXs &marker_density = m_fluid_sim->getMarkerDensities();
+// #ifdef WITH_MARKERS
+//     const std::vector<Vector2s> &particles = (dynamic_cast<StableFluidsSimWithMarkers *>(m_fluid_sim))->particles();
+//     const ArrayXb &fluids = (dynamic_cast<StableFluidsSimWithMarkers *>(m_fluid_sim))->has_fluid();
+// #else
+//     const std::vector<Vector2s> &particles = std::vector<Vector2s>();
+//     ArrayXb fluids(N + 2, N + 2, N + 2);
+//     for(int z = 0; z < N+2; z++)
+//     for (int i = 0; i < N + 2; i++)
+//         for (int j = 0; j < N + 2; j++)
+//             fluids(i, j,z) = true;
+// #endif
 
-    scalar r = 0.5;
-    scalar h = r * 3;
-    scalar hcull = h * 2;
-    scalar tao = (1 - r * r / h / h) * (1 - r * r / h / h) * (1 - r * r / h / h);
+    // scalar r = 0.5;
+    // scalar h = r * 3;
+    // scalar hcull = h * 2;
+    // scalar tao = (1 - r * r / h / h) * (1 - r * r / h / h) * (1 - r * r / h / h);
 
-    // extract the free surface from particles
-    // reference: R. Bridson 2008, "Fluid Simulation for Computer Graphics" p84.
-    for (int i = 0; i < N; i++)
-        for (int j = 0; j < N; j++)
-            m_particle_cell_map(i, j).clear();
+    // // extract the free surface from particles
+    // // reference: R. Bridson 2008, "Fluid Simulation for Computer Graphics" p84.
+    // for (int i = 0; i < N; i++)
+    //     for (int j = 0; j < N; j++)
+    //         m_particle_cell_map(i, j).clear();
 
-    for (size_t p = 0; p < particles.size(); p++)
-    {
-        int i = (int)(particles[p].x() * N - 0.5);
-        int j = (int)(particles[p].y() * N - 0.5);
-        assert(i >= 0 && i < N);
-        assert(j >= 0 && j < N);
-        m_particle_cell_map(i, j).push_back(p);
-        m_particle_cell_map(i + 1, j).push_back(p);
-        m_particle_cell_map(i, j + 1).push_back(p);
-        m_particle_cell_map(i + 1, j + 1).push_back(p);
-    }
+    // for (size_t p = 0; p < particles.size(); p++)
+    // {
+    //     int i = (int)(particles[p].x() * N - 0.5);
+    //     int j = (int)(particles[p].y() * N - 0.5);
+    //     assert(i >= 0 && i < N);
+    //     assert(j >= 0 && j < N);
+    //     m_particle_cell_map(i, j).push_back(p);
+    //     m_particle_cell_map(i + 1, j).push_back(p);
+    //     m_particle_cell_map(i, j + 1).push_back(p);
+    //     m_particle_cell_map(i + 1, j + 1).push_back(p);
+    // }
 
-    ArrayXs implicit_surface(N + 1, N + 1);
-    for (int i = 0; i <= N; i++)
-    {
-        for (int j = 0; j <= N; j++)
-        {
-            Vector2s node_pos = Vector2s(i + 0.5, j + 0.5);
+    // ArrayXs implicit_surface(N + 1, N + 1);
+    // for (int i = 0; i <= N; i++)
+    // {
+    //     for (int j = 0; j <= N; j++)
+    //     {
+    //         Vector2s node_pos = Vector2s(i + 0.5, j + 0.5);
 
-            scalar is = 0;
-            for (size_t p = 0; p < m_particle_cell_map(i, j).size(); p++)
-            {
-                Vector2s par_pos = particles[m_particle_cell_map(i, j)[p]] * N;
-                scalar dsq = (node_pos - par_pos).dot(node_pos - par_pos) / h / h;
-                is += (dsq > 1 ? 0 : (1 - dsq) * (1 - dsq) * (1 - dsq));
-            }
-            implicit_surface(i, j) = is - tao;
-        }
-    }
+    //         scalar is = 0;
+    //         for (size_t p = 0; p < m_particle_cell_map(i, j).size(); p++)
+    //         {
+    //             Vector2s par_pos = particles[m_particle_cell_map(i, j)[p]] * N;
+    //             scalar dsq = (node_pos - par_pos).dot(node_pos - par_pos) / h / h;
+    //             is += (dsq > 1 ? 0 : (1 - dsq) * (1 - dsq) * (1 - dsq));
+    //         }
+    //         implicit_surface(i, j) = is - tao;
+    //     }
+    // }
 
-    glBegin(GL_TRIANGLES);
-    for (int i = 0; i < N; i++)
-    {
-        for (int j = 0; j < N; j++)
-        {
-            scalar r, g, b;
-            m_colormap.getColorByDensity(marker_density(i + 1, j + 1), r, g, b);
-            if (m_solids(i + 1, j + 1))
-                glColor3d(1, 1, 1);
-            else
-                glColor3d((GLdouble)r, (GLdouble)g, (GLdouble)b);
+    // glBegin(GL_TRIANGLES);
+    // for (int i = 0; i < N; i++)
+    // {
+    //     for (int j = 0; j < N; j++)
+    //     {
+    //         scalar r, g, b;
+    //         m_colormap.getColorByDensity(marker_density(i + 1, j + 1), r, g, b);
+    //         if (m_solids(i + 1, j + 1))
+    //             glColor3d(1, 1, 1);
+    //         else
+    //             glColor3d((GLdouble)r, (GLdouble)g, (GLdouble)b);
 
-            // the positive pattern of the four corners of a cell
-            int positive_pattern = 0;
-            scalar lt = implicit_surface(i, j);
-            scalar rt = implicit_surface(i, j + 1);
-            scalar lb = implicit_surface(i + 1, j);
-            scalar rb = implicit_surface(i + 1, j + 1);
-            positive_pattern = (lt > 0 ? 0x8 : 0x0) + (rt > 0 ? 0x4 : 0x0) + (lb > 0 ? 0x2 : 0x0) + (rb > 0 ? 0x1 : 0x0);
-            if (m_solids(i + 1, j + 1))
-                positive_pattern = 0xF;
+    //         // the positive pattern of the four corners of a cell
+    //         int positive_pattern = 0;
+    //         scalar lt = implicit_surface(i, j);
+    //         scalar rt = implicit_surface(i, j + 1);
+    //         scalar lb = implicit_surface(i + 1, j);
+    //         scalar rb = implicit_surface(i + 1, j + 1);
+    //         positive_pattern = (lt > 0 ? 0x8 : 0x0) + (rt > 0 ? 0x4 : 0x0) + (lb > 0 ? 0x2 : 0x0) + (rb > 0 ? 0x1 : 0x0);
+    //         if (m_solids(i + 1, j + 1))
+    //             positive_pattern = 0xF;
 
-            scalar xl = j;
-            scalar xr = j + 1;
-            scalar yt = N - i;
-            scalar yb = N - (i + 1);
+    //         scalar xl = j;
+    //         scalar xr = j + 1;
+    //         scalar yt = N - i;
+    //         scalar yb = N - (i + 1);
 
-            scalar xt = xl - lt / (rt - lt);
-            scalar xb = xl - lb / (rb - lb);
-            scalar yl = yt + lt / (lb - lt);
-            scalar yr = yt + rt / (rb - rt);
+    //         scalar xt = xl - lt / (rt - lt);
+    //         scalar xb = xl - lb / (rb - lb);
+    //         scalar yl = yt + lt / (lb - lt);
+    //         scalar yr = yt + rt / (rb - rt);
 
-            switch (positive_pattern)
-            {
-            case 0x0: // 0000
-                // nothing to do
-                break;
-            case 0x1: // 0001
-                // bottom-right triangle
-                glVertex2d(xr, yr);
-                glVertex2d(xb, yb);
-                glVertex2d(xr, yb);
-                break;
-            case 0x2: // 0010
-                // bottom-left triangle
-                glVertex2d(xb, yb);
-                glVertex2d(xl, yl);
-                glVertex2d(xl, yb);
-                break;
-            case 0x3: // 0011
-                // bottom half
-                glVertex2d(xr, yr);
-                glVertex2d(xl, yl);
-                glVertex2d(xr, yb);
-                glVertex2d(xl, yl);
-                glVertex2d(xr, yb);
-                glVertex2d(xl, yb);
-                break;
-            case 0x4: // 0100
-                // top-right triangle
-                glVertex2d(xt, yt);
-                glVertex2d(xr, yr);
-                glVertex2d(xr, yt);
-                break;
-            case 0x5: // 0101
-                // right half
-                glVertex2d(xt, yt);
-                glVertex2d(xb, yb);
-                glVertex2d(xr, yb);
-                glVertex2d(xr, yb);
-                glVertex2d(xr, yt);
-                glVertex2d(xt, yt);
-                break;
-            case 0x6: // 0110
-                // top-right triangle and bottom-left triangle
-                glVertex2d(xt, yt);
-                glVertex2d(xr, yr);
-                glVertex2d(xr, yt);
-                glVertex2d(xb, yb);
-                glVertex2d(xl, yl);
-                glVertex2d(xl, yb);
-                break;
-            case 0x7: // 0111
-                // complement of top-left triangle
-                glVertex2d(xr, yb);
-                glVertex2d(xl, yl);
-                glVertex2d(xl, yb);
+    //         switch (positive_pattern)
+    //         {
+    //         case 0x0: // 0000
+    //             // nothing to do
+    //             break;
+    //         case 0x1: // 0001
+    //             // bottom-right triangle
+    //             glVertex2d(xr, yr);
+    //             glVertex2d(xb, yb);
+    //             glVertex2d(xr, yb);
+    //             break;
+    //         case 0x2: // 0010
+    //             // bottom-left triangle
+    //             glVertex2d(xb, yb);
+    //             glVertex2d(xl, yl);
+    //             glVertex2d(xl, yb);
+    //             break;
+    //         case 0x3: // 0011
+    //             // bottom half
+    //             glVertex2d(xr, yr);
+    //             glVertex2d(xl, yl);
+    //             glVertex2d(xr, yb);
+    //             glVertex2d(xl, yl);
+    //             glVertex2d(xr, yb);
+    //             glVertex2d(xl, yb);
+    //             break;
+    //         case 0x4: // 0100
+    //             // top-right triangle
+    //             glVertex2d(xt, yt);
+    //             glVertex2d(xr, yr);
+    //             glVertex2d(xr, yt);
+    //             break;
+    //         case 0x5: // 0101
+    //             // right half
+    //             glVertex2d(xt, yt);
+    //             glVertex2d(xb, yb);
+    //             glVertex2d(xr, yb);
+    //             glVertex2d(xr, yb);
+    //             glVertex2d(xr, yt);
+    //             glVertex2d(xt, yt);
+    //             break;
+    //         case 0x6: // 0110
+    //             // top-right triangle and bottom-left triangle
+    //             glVertex2d(xt, yt);
+    //             glVertex2d(xr, yr);
+    //             glVertex2d(xr, yt);
+    //             glVertex2d(xb, yb);
+    //             glVertex2d(xl, yl);
+    //             glVertex2d(xl, yb);
+    //             break;
+    //         case 0x7: // 0111
+    //             // complement of top-left triangle
+    //             glVertex2d(xr, yb);
+    //             glVertex2d(xl, yl);
+    //             glVertex2d(xl, yb);
 
-                glVertex2d(xr, yb);
-                glVertex2d(xt, yt);
-                glVertex2d(xl, yl);
+    //             glVertex2d(xr, yb);
+    //             glVertex2d(xt, yt);
+    //             glVertex2d(xl, yl);
 
-                glVertex2d(xr, yb);
-                glVertex2d(xr, yt);
-                glVertex2d(xt, yt);
-                break;
-            case 0x8: // 1000
-                // top-left triangle
-                glVertex2d(xl, yl);
-                glVertex2d(xt, yt);
-                glVertex2d(xl, yt);
-                break;
-            case 0x9: // 1001
-                // top-left triangle, and bottom-right triangle
-                glVertex2d(xl, yl);
-                glVertex2d(xt, yt);
-                glVertex2d(xl, yt);
+    //             glVertex2d(xr, yb);
+    //             glVertex2d(xr, yt);
+    //             glVertex2d(xt, yt);
+    //             break;
+    //         case 0x8: // 1000
+    //             // top-left triangle
+    //             glVertex2d(xl, yl);
+    //             glVertex2d(xt, yt);
+    //             glVertex2d(xl, yt);
+    //             break;
+    //         case 0x9: // 1001
+    //             // top-left triangle, and bottom-right triangle
+    //             glVertex2d(xl, yl);
+    //             glVertex2d(xt, yt);
+    //             glVertex2d(xl, yt);
 
-                glVertex2d(xr, yr);
-                glVertex2d(xb, yb);
-                glVertex2d(xr, yb);
-                break;
-            case 0xA: // 1010
-                // left half
-                glVertex2d(xb, yb);
-                glVertex2d(xt, yt);
-                glVertex2d(xl, yt);
+    //             glVertex2d(xr, yr);
+    //             glVertex2d(xb, yb);
+    //             glVertex2d(xr, yb);
+    //             break;
+    //         case 0xA: // 1010
+    //             // left half
+    //             glVertex2d(xb, yb);
+    //             glVertex2d(xt, yt);
+    //             glVertex2d(xl, yt);
 
-                glVertex2d(xl, yt);
-                glVertex2d(xl, yb);
-                glVertex2d(xb, yb);
-                break;
-            case 0xB: // 1011
-                // complement of top-right triangle
-                glVertex2d(xl, yb);
-                glVertex2d(xr, yb);
-                glVertex2d(xr, yr);
+    //             glVertex2d(xl, yt);
+    //             glVertex2d(xl, yb);
+    //             glVertex2d(xb, yb);
+    //             break;
+    //         case 0xB: // 1011
+    //             // complement of top-right triangle
+    //             glVertex2d(xl, yb);
+    //             glVertex2d(xr, yb);
+    //             glVertex2d(xr, yr);
 
-                glVertex2d(xl, yb);
-                glVertex2d(xr, yr);
-                glVertex2d(xt, yt);
+    //             glVertex2d(xl, yb);
+    //             glVertex2d(xr, yr);
+    //             glVertex2d(xt, yt);
 
-                glVertex2d(xl, yb);
-                glVertex2d(xt, yt);
-                glVertex2d(xl, yt);
-                break;
-            case 0xC: // 1100
-                // top half
-                glVertex2d(xl, yl);
-                glVertex2d(xr, yr);
-                glVertex2d(xr, yt);
+    //             glVertex2d(xl, yb);
+    //             glVertex2d(xt, yt);
+    //             glVertex2d(xl, yt);
+    //             break;
+    //         case 0xC: // 1100
+    //             // top half
+    //             glVertex2d(xl, yl);
+    //             glVertex2d(xr, yr);
+    //             glVertex2d(xr, yt);
 
-                glVertex2d(xr, yt);
-                glVertex2d(xl, yt);
-                glVertex2d(xl, yl);
-                break;
-            case 0xD: // 1101
-                // complement to bottom-left triangle
-                glVertex2d(xr, yt);
-                glVertex2d(xl, yt);
-                glVertex2d(xl, yl);
+    //             glVertex2d(xr, yt);
+    //             glVertex2d(xl, yt);
+    //             glVertex2d(xl, yl);
+    //             break;
+    //         case 0xD: // 1101
+    //             // complement to bottom-left triangle
+    //             glVertex2d(xr, yt);
+    //             glVertex2d(xl, yt);
+    //             glVertex2d(xl, yl);
 
-                glVertex2d(xr, yt);
-                glVertex2d(xl, yl);
-                glVertex2d(xb, yb);
+    //             glVertex2d(xr, yt);
+    //             glVertex2d(xl, yl);
+    //             glVertex2d(xb, yb);
 
-                glVertex2d(xr, yt);
-                glVertex2d(xb, yb);
-                glVertex2d(xr, yb);
-                break;
-            case 0xE: // 1110
-                // complement to bottom-right triangle
-                glVertex2d(xl, yt);
-                glVertex2d(xl, yb);
-                glVertex2d(xb, yb);
+    //             glVertex2d(xr, yt);
+    //             glVertex2d(xb, yb);
+    //             glVertex2d(xr, yb);
+    //             break;
+    //         case 0xE: // 1110
+    //             // complement to bottom-right triangle
+    //             glVertex2d(xl, yt);
+    //             glVertex2d(xl, yb);
+    //             glVertex2d(xb, yb);
 
-                glVertex2d(xl, yt);
-                glVertex2d(xb, yb);
-                glVertex2d(xr, yr);
+    //             glVertex2d(xl, yt);
+    //             glVertex2d(xb, yb);
+    //             glVertex2d(xr, yr);
 
-                glVertex2d(xl, yt);
-                glVertex2d(xr, yr);
-                glVertex2d(xr, yt);
-                break;
-            case 0xF: // 1111
-                // whole cell
-                glVertex2d(xl, yb);
-                glVertex2d(xr, yb);
-                glVertex2d(xr, yt);
+    //             glVertex2d(xl, yt);
+    //             glVertex2d(xr, yr);
+    //             glVertex2d(xr, yt);
+    //             break;
+    //         case 0xF: // 1111
+    //             // whole cell
+    //             glVertex2d(xl, yb);
+    //             glVertex2d(xr, yb);
+    //             glVertex2d(xr, yt);
 
-                glVertex2d(xr, yt);
-                glVertex2d(xl, yt);
-                glVertex2d(xl, yb);
-                break;
-            }
-        }
-    }
-    glEnd();
+    //             glVertex2d(xr, yt);
+    //             glVertex2d(xl, yt);
+    //             glVertex2d(xl, yb);
+    //             break;
+    //         }
+    //     }
+    // }
+    // glEnd();
 
-    if (m_display_debugging)
-    {
-        // implicit surface values
-        glBegin(GL_QUADS);
-        for (int i = 0; i <= N; i++)
-        {
-            for (int j = 0; j <= N; j++)
-            {
-                if (implicit_surface(i, j) > 0)
-                    glColor4d(0, 1, 0, 1);
-                else
-                    glColor4d(1, 0, 0, 1);
+    // if (m_display_debugging)
+    // {
+    //     // implicit surface values
+    //     glBegin(GL_QUADS);
+    //     for (int i = 0; i <= N; i++)
+    //     {
+    //         for (int j = 0; j <= N; j++)
+    //         {
+    //             if (implicit_surface(i, j) > 0)
+    //                 glColor4d(0, 1, 0, 1);
+    //             else
+    //                 glColor4d(1, 0, 0, 1);
 
-                scalar r = 0.2;
-                glVertex2d(j - r, N - i - r);
-                glVertex2d(j + r, N - i - r);
-                glVertex2d(j + r, N - i + r);
-                glVertex2d(j - r, N - i + r);
-            }
-        }
-        glEnd();
-    }
+    //             scalar r = 0.2;
+    //             glVertex2d(j - r, N - i - r);
+    //             glVertex2d(j + r, N - i - r);
+    //             glVertex2d(j + r, N - i + r);
+    //             glVertex2d(j - r, N - i + r);
+    //         }
+    //     }
+    //     glEnd();
+    // }
 
-    // fluid boundary
-    glColor4f(1.0, 1.0, 1.0, 1.0);
-    glBegin(GL_LINE_STRIP);
-    glVertex2d(0, 0);
-    glVertex2d(N, 0);
-    glVertex2d(N, N);
-    glVertex2d(0, N);
-    glVertex2d(0, 0);
-    glEnd();
+    // // fluid boundary
+    // glColor4f(1.0, 1.0, 1.0, 1.0);
+    // glBegin(GL_LINE_STRIP);
+    // glVertex2d(0, 0);
+    // glVertex2d(N, 0);
+    // glVertex2d(N, N);
+    // glVertex2d(0, N);
+    // glVertex2d(0, 0);
+    // glEnd();
 
-    if (m_display_debugging)
-    {
-        // grid
-        glColor4f(0.5, 0.5, 0.5, 1.0);
-        glBegin(GL_LINES);
-        for (int i = 1; i < N; i++)
-        {
-            glVertex2d(0, i);
-            glVertex2d(N, i);
-            glVertex2d(i, 0);
-            glVertex2d(i, N);
-        }
-        glEnd();
-    }
+    // if (m_display_debugging)
+    // {
+    //     // grid
+    //     glColor4f(0.5, 0.5, 0.5, 1.0);
+    //     glBegin(GL_LINES);
+    //     for (int i = 1; i < N; i++)
+    //     {
+    //         glVertex2d(0, i);
+    //         glVertex2d(N, i);
+    //         glVertex2d(i, 0);
+    //         glVertex2d(i, N);
+    //     }
+    //     glEnd();
+    // }
 }
 
 unsigned int StableFluidsEnsemble::getGlutDisplayMode() const
@@ -814,16 +797,17 @@ void StableFluidsEnsemble::addSphere(const int &row, const int &col, const int &
 
 ArrayXb StableFluidsEnsemble::generateSolidMap(int n)
 {
-    ArrayXb solids = ArrayXb::Zero(n + 2, n + 2);
+    ArrayXb solids = ArrayXb::Zero(n + 2, n + 2, n+2);
     scalar cx = 0.5;
     scalar cy = 0.6;
     scalar r = 0.2;
+    for(int z = 0; z < n+2; z++)
     for (int i = 0; i < n + 2; i++)
     {
         for (int j = 0; j < n + 2; j++)
         {
-            if (i == 0 || i == n + 1 || j == 0 || j == n + 1)
-                solids(i, j) = true;
+            if (i == 0 || i == n + 1 || j == 0 || j == n + 1 || z == 0 || z == n + 1)
+                solids(i, j,z) = true;
 
 #ifdef WITH_MARKERS
             scalar x = (scalar)j / n;

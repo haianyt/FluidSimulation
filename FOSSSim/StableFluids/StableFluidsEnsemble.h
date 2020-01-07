@@ -10,10 +10,10 @@
 #include "StableFluidsSimGrader.h"
 #include "StableFluidsSimSerializer.h"
 
-#include <CMD/CMD_Args.h>
-#include <UT/UT_Assert.h>
-#include <GU/GU_Detail.h>
-#include <GU/GU_PrimVolume.h>
+// #include <CMD/CMD_Args.h>
+// #include <UT/UT_Assert.h>
+// #include <GU/GU_Detail.h>
+// #include <GU/GU_PrimVolume.h>
 
 class StableFluidsEnsemble : public SimulationEnsemble
 {
@@ -74,7 +74,7 @@ public:
     virtual void setUseAdvect(bool use_advect);
     virtual void setUseProj(bool use_proj);
 
-    virtual void save();
+    // virtual void save();
 
 private:
     void addSphere(const int &row, const int &col, const int &R);
@@ -107,9 +107,9 @@ private:
 
     StableFluidsSimGrader *m_fluid_sim_grader;
 
-    GU_Detail gdp;
-    GU_PrimVolume *volume;
-    int frame;
+    // GU_Detail gdp;
+    // GU_PrimVolume *volume;
+    // int frame;
 };
 
 #endif
