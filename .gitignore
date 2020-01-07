@@ -49,10 +49,6 @@ build/FOSSSim/CMakeFiles/FOSSSim.dir/StableFluids/StableFluidsSimGrader.cpp.o
 build/FOSSSim/CMakeFiles/FOSSSim.dir/StableFluids/StableFluidsSimSerializer.cpp.o
 build/FOSSSim/CMakeFiles/FOSSSim.dir/StableFluids/StableFluidsSimXMLParser.cpp.o
 .vscode/launch.json
-.idea/misc.xml
-.idea/modules.xml
-.idea/qw2197.iml
-.idea/workspace.xml
 .vscode/settings.json
 build/test1
 build/CMakeFiles/test1.dir/build.make
